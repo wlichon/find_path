@@ -1,0 +1,3 @@
+﻿  main.cpp
+LINK : warning LNK4067: Mehrdeutiger Einstiegspunkt; "mainCRTStartup" ausgewählt.
+  find_path.vcxproj -> C:\Dev\find_path\x64\Debug\find_path.exe
