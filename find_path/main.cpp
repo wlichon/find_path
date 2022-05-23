@@ -13,11 +13,20 @@
 int main(int argc, char** argv) {
 	std::vector<std::vector<Station>> stations;
 	std::vector<ConnInfo> distance;
-	const char* asd = "test_graph.txt";
+	const char* asd = "test_graph";
 	int size = 0;
 	readFile(asd,stations,distance,size);
 	Graph graph(stations, distance,size);
-	graph.printMapping();
+	//graph.printMapping();
+
+	Station start = { "Johnstrasse" };
+	Station destination = { "Westbahnhof"  };
+	std::vector<std::string> path;
+	graph.dijkstra(start, destination,path);
+
+	for (auto i : path) {
+		std::cout << i << " ";
+	}
 	/*
 	Station s1 = { "Johnstrasse","U3:" };
 	Connection c = { s1,2 };

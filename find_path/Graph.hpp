@@ -9,11 +9,16 @@
 #include <regex>
 #include <vector>
 #include <iostream>
+#include <set>
+#include <type_traits>
 
 struct Station {
 	std::string name;
 	bool operator<(const Station& s) const {
 		return name < s.name;
+	}
+	bool operator==(const Station& s) const {
+		return name == s.name;
 	}
 };
 
@@ -28,6 +33,20 @@ struct Connection {
 	ConnInfo info;
 	//friend std::ostream& operator<<(std::ostream& os, const Connection& s1);
 };
+
+struct Node {
+	Station station;
+	int minDistance;
+	bool operator<(const Node& s) const {
+		return station.name < s.station.name;
+	}
+	Station pre;
+	std::string linie;
+	bool operator<(const std::string& s) const {
+		return station.name < s;
+	}
+};
+
 static void readFile(const char* fileName, std::vector<std::vector<Station>>& stations, std::vector<ConnInfo>& distance, int& size) {
 	using namespace std;
 	ifstream fin;
@@ -52,13 +71,14 @@ static void readFile(const char* fileName, std::vector<std::vector<Station>>& st
 			iss >> word;
 			if (regex_match(word, linie)) {
 				linienName = word;
+				//std::cout << linienName;
 				nextIsWord = true;
 				std::vector<Station> newLine;
 				stations.push_back(newLine);
 				continue;
 			}
 			if (nextIsWord) {
-				if (word.back() != '\"') {
+				while (word.back() != '\"') {
 					string temp = word;
 					iss >> word;
 					if (word == temp) {
@@ -95,15 +115,16 @@ static void readFile(const char* fileName, std::vector<std::vector<Station>>& st
 	fin.close();
 }
 
+bool Greater(const Node& lhs, const Node& rhs)
+{
+	return std::tie(lhs.station.name, lhs.minDistance) < std::tie(rhs.station.name, rhs.minDistance);
+}
+
 /*
 */
 
 class Graph {
 public:
-
-	void addNode() {
-
-	}
 	Graph(std::vector<std::vector<Station>>& stations, std::vector<ConnInfo>& distances,int size) {
 		this->size = size;
 		int index = 0;
@@ -130,6 +151,65 @@ public:
 				distIndex++;
 			}
 
+		}
+		std::list<Connection> asd = l[m[{"Johnstrasse"}]];
+		for (auto i : asd) {
+			std::cout << i.station.name << " Linie: " << i.info.linie << std::endl;
+		}
+		
+
+
+	}
+
+	void createNode(Node& n,Station station,int dist,Station pre,std::string linie) {
+		n.minDistance = dist;
+		n.station = station;
+		n.pre = pre;
+		n.linie = linie;
+	}
+
+	void dijkstra(Station start, Station destination, std::vector<std::string>& path) {
+		std::vector<Node> paths;
+		std::set<Node> visited;
+
+		Node current = { start,0 };
+		paths.push_back(current);
+		std::vector<Node>::iterator it;
+		std::list<Connection> neighbours;
+		while (!paths.empty()) {
+			it = paths.begin();
+			current = *it;
+			paths.erase(paths.begin());
+			visited.insert(current);
+			if (current.station.name == destination.name) {
+				std::cout << "Distance of path: " << current.minDistance << std::endl;
+				std::set<Node>::iterator it = visited.find(current);
+				path.push_back(current.station.name);
+				
+				while (it->station.name != start.name) {
+					path.insert(path.begin(), it->linie + " " + it->pre.name);
+					Node lookFor = { it->pre.name,0 };
+					it = visited.find(lookFor);
+				}
+				/*
+				for (auto i : visited) {
+					std::cout << "Station: " << i.station.name << " Pre: " << i.pre.name << std::endl;
+				}
+				*/
+				return;
+			}
+			int index = m[current.station];
+			neighbours = l[index];
+			std::cout << current.station.name << " " << current.minDistance << std::endl;
+			Node insert;
+			for (auto i : neighbours) {
+				createNode(insert, i.station, i.info.distance+current.minDistance,current.station,i.info.linie);
+				if ((std::find_if(std::begin(visited), std::end(visited),
+					[&](Node const& p) { return p.station.name == insert.station.name; }) == visited.end())) {
+					paths.insert(std::lower_bound(paths.begin(), paths.end(), insert,Greater), insert);
+
+				} //check if path to be inserted hasnt already been visited
+			}
 		}
 
 
