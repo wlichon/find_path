@@ -10,6 +10,7 @@
 #include <regex>
 #include "Graph.hpp"
 
+
 int main(int argc, char** argv) {
 	std::vector<std::vector<Station>> stations;
 	std::vector<ConnInfo> distance;
@@ -20,13 +21,15 @@ int main(int argc, char** argv) {
 	//graph.printMapping();
 
 	Station start = { "Johnstrasse" };
-	Station destination = { "Westbahnhof"  };
-	std::vector<std::string> path;
+	Station destination = { "DresdnerStrasse"  };
+	std::vector<Connection> path;
+	//graph.heapTest();
+	//graph.predecSetTest();
 	graph.dijkstra(start, destination,path);
 
-	for (auto i : path) {
-		std::cout << i << " ";
-	}
+	graph.printPath(path);
+
+
 	/*
 	Station s1 = { "Johnstrasse","U3:" };
 	Connection c = { s1,2 };

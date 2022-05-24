@@ -9,16 +9,18 @@
 #include <regex>
 #include <vector>
 #include <iostream>
+#include <queue>
+#include <utility>
 #include <set>
-#include <type_traits>
+#include <algorithm>
 
 struct Station {
 	std::string name;
-	bool operator<(const Station& s) const {
-		return name < s.name;
+	bool operator<(const Station& rhs) const  {
+		return name < rhs.name;
 	}
-	bool operator==(const Station& s) const {
-		return name == s.name;
+	bool operator==(const Station& rhs) const {
+		return name == rhs.name;
 	}
 };
 
@@ -28,24 +30,24 @@ struct ConnInfo{
 	std::string linie;
 };
 
-struct Connection {
+class Connection {
+public:
+	Connection(Station station, ConnInfo info) {
+		this->station = station;
+		this->info = info;
+		this->pre = { "tbd" };
+	}
+	bool operator>(const Connection rhs) const {
+		return info.distance > rhs.info.distance;
+	}
+	bool operator<(const Connection rhs) const {
+		return station.name < rhs.station.name;
+	}
 	Station station;
 	ConnInfo info;
-	//friend std::ostream& operator<<(std::ostream& os, const Connection& s1);
+	Station pre;
 };
 
-struct Node {
-	Station station;
-	int minDistance;
-	bool operator<(const Node& s) const {
-		return station.name < s.station.name;
-	}
-	Station pre;
-	std::string linie;
-	bool operator<(const std::string& s) const {
-		return station.name < s;
-	}
-};
 
 static void readFile(const char* fileName, std::vector<std::vector<Station>>& stations, std::vector<ConnInfo>& distance, int& size) {
 	using namespace std;
@@ -115,20 +117,15 @@ static void readFile(const char* fileName, std::vector<std::vector<Station>>& st
 	fin.close();
 }
 
-bool Greater(const Node& lhs, const Node& rhs)
-{
-	return std::tie(lhs.station.name, lhs.minDistance) < std::tie(rhs.station.name, rhs.minDistance);
-}
-
 /*
 */
+
 
 class Graph {
 public:
 	Graph(std::vector<std::vector<Station>>& stations, std::vector<ConnInfo>& distances,int size) {
-		this->size = size;
 		int index = 0;
-		l = new std::list<Connection>[this->size];
+		l = new std::list<Connection>[size];
 		for (auto& line : stations) {
 			for (auto& j : line) {
 				if (m.count(j) > 0) {
@@ -138,6 +135,9 @@ public:
 				index++;
 			}
 		}
+
+
+
 		int distIndex = 0;
 		for (auto& line : stations) {
 			for (int i = 0; i < line.size() - 1; i++) {
@@ -145,73 +145,146 @@ public:
 				Station s2 = line[i + 1];
 				ConnInfo info = distances[distIndex];
 				int index = m[s1];
-				l[index].push_back({ s2,info });
+				l[index].push_back(Connection(s2,info));
 				index = m[s2];
-				l[index].push_back({ s1,info });
+				l[index].push_back(Connection(s1,info));
 				distIndex++;
 			}
 
 		}
+		/*
 		std::list<Connection> asd = l[m[{"Johnstrasse"}]];
 		for (auto i : asd) {
 			std::cout << i.station.name << " Linie: " << i.info.linie << std::endl;
 		}
+		*/
 		
-
-
+		this->size = m.size();
+		this->vis = new bool[this->size];
 	}
 
-	void createNode(Node& n,Station station,int dist,Station pre,std::string linie) {
-		n.minDistance = dist;
-		n.station = station;
-		n.pre = pre;
-		n.linie = linie;
+	void initVis() {
+		for (int i = 0; i < this->size; i++) {
+			vis[i] = false;
+		}
 	}
 
-	void dijkstra(Station start, Station destination, std::vector<std::string>& path) {
-		std::vector<Node> paths;
-		std::set<Node> visited;
+	void dijkstra(Station start, Station destination, std::vector<Connection>& path) {
+		std::priority_queue<Connection, std::vector<Connection>, std::greater<Connection>> minQ;
+		Connection _start = { start,{0,"Start"} };
+		minQ.push(_start);
+		initVis();
+		std::set<Connection> pre;
+		int destID = m[destination];
+		int startID = m[start];
+		while (!minQ.empty()) {
+			Connection current = minQ.top();
+			minQ.pop();
+			int ID = m[current.station];
+			if (ID == destID) {
+				std::cout << "Gewichtung kuerzester Pfad: " << current.info.distance << std::endl;
+				path.push_back(current);
+				std::set<Connection>::iterator it;
+				while (m[path.back().station] != startID) {
+					Connection temp = { {current.pre}, {-1,"egal"} };
+					it = pre.find(temp);
+					current = *it;
+					path.push_back(current);
 
-		Node current = { start,0 };
-		paths.push_back(current);
-		std::vector<Node>::iterator it;
-		std::list<Connection> neighbours;
-		while (!paths.empty()) {
-			it = paths.begin();
-			current = *it;
-			paths.erase(paths.begin());
-			visited.insert(current);
-			if (current.station.name == destination.name) {
-				std::cout << "Distance of path: " << current.minDistance << std::endl;
-				std::set<Node>::iterator it = visited.find(current);
-				path.push_back(current.station.name);
-				
-				while (it->station.name != start.name) {
-					path.insert(path.begin(), it->linie + " " + it->pre.name);
-					Node lookFor = { it->pre.name,0 };
-					it = visited.find(lookFor);
 				}
-				/*
-				for (auto i : visited) {
-					std::cout << "Station: " << i.station.name << " Pre: " << i.pre.name << std::endl;
-				}
-				*/
+				std::reverse(path.begin(), path.end());
 				return;
 			}
-			int index = m[current.station];
-			neighbours = l[index];
-			std::cout << current.station.name << " " << current.minDistance << std::endl;
-			Node insert;
-			for (auto i : neighbours) {
-				createNode(insert, i.station, i.info.distance+current.minDistance,current.station,i.info.linie);
-				if ((std::find_if(std::begin(visited), std::end(visited),
-					[&](Node const& p) { return p.station.name == insert.station.name; }) == visited.end())) {
-					paths.insert(std::lower_bound(paths.begin(), paths.end(), insert,Greater), insert);
 
-				} //check if path to be inserted hasnt already been visited
+			if (vis[ID] != false) {
+				continue;
+			}
+			vis[ID] = true;
+			pre.insert(current);
+			std::list<Connection> neighbours = l[ID];
+
+			for(auto neighbour : neighbours){
+				int ID = m[neighbour.station];
+				if (vis[ID] != false)
+					continue;
+				neighbour.info.distance += current.info.distance;
+				neighbour.pre = current.station;
+				minQ.push(neighbour);
 			}
 		}
+	}
 
+	void printPath(std::vector<Connection> path) {
+		for (auto i : path) {
+			std::cout << i.info.linie << " " << i.station.name << std::endl;
+		}
+	}
+
+	void predecSetTest() {
+		std::set<Connection> pre;
+
+
+		Connection a = { {"Johnstrasse"}, {1,"U3:"} };
+		Connection b = { {"Goldstr"},{2,"U3:"} };
+		Connection c = { {"Asdstr"},{3,"U3:"} };
+		Connection d = { {"Gasstr"},{2,"U4:"} };
+		Connection e = { {"Pasdtstr"},{1,"U7:"} };
+
+
+		pre.insert(a);
+		pre.insert(b);
+		pre.insert(c);
+		pre.insert(d);
+		pre.insert(e);
+
+		/*
+		for (auto i : pre) {
+			std::cout << i.info.linie << " " << i.station.name << " " << i.pre.name << " ";
+		}
+		*/
+		Station test = { "Goldstr" };
+		std::set<Connection>::iterator it;
+		it = pre.find({ test,{-1,"idk"} });
+		std::cout << it->pre.name;
+
+
+		/*
+		PREDEC DATA
+		int id;
+		Station pre;
+		Connection conn;
+		*/
+
+	}
+
+
+	void heapTest() {
+		
+		std::priority_queue<Connection,std::vector<Connection>,std::greater<Connection>> pq;
+		
+		Connection a = { {"Johnstrasse"},{1,"U3:"} };
+		Connection b = { {"Goldstr"},{2,"U3:"} };
+		Connection c = { {"Asdstr"},{3,"U3:"} };
+		Connection d = { {"Gasstr"},{2,"U4:"} };
+		Connection e = { {"Pasdtstr"},{1,"U7:"} };
+
+		
+		pq.push(b);
+		pq.push(a);
+		pq.push(c);
+		pq.push(d);
+		pq.push(e);
+		/*
+		pq.push(10);
+		pq.push(30);
+		pq.push(20);
+
+		*/
+		while(!pq.empty()) {
+			std::cout << pq.top().info.distance << pq.top().station.name << " ";
+			pq.pop();
+		}
+	
 
 	}
 
@@ -228,7 +301,8 @@ public:
 
 
 private:
-	std::list<Connection>* l;
-	std::map<Station, int> m;
-	int size;
+	std::list<Connection>* l; //Adjazenz Liste
+	std::map<Station, int> m; //mapping von Station (Name) zu einer ID
+	int size; //Anzahl von unique Stationen
+	bool* vis; //Visited array mit einer groesse gleich der size variable
 };
