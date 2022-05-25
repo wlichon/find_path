@@ -14,6 +14,8 @@
 #include <set>
 #include <algorithm>
 
+#define PENALTY 0
+
 struct Station {
 	std::string name;
 	bool operator<(const Station& rhs) const  {
@@ -73,7 +75,6 @@ static void readFile(const char* fileName, std::vector<std::vector<Station>>& st
 			iss >> word;
 			if (regex_match(word, linie)) {
 				linienName = word;
-				//std::cout << linienName;
 				nextIsWord = true;
 				std::vector<Station> newLine;
 				stations.push_back(newLine);
@@ -89,7 +90,7 @@ static void readFile(const char* fileName, std::vector<std::vector<Station>>& st
 						iss.str(line);
 						iss >> word;
 					}
-					temp += word;
+					temp += " " + word;
 					word = temp;
 				}
 				word = word.substr(1, word.size() - 2);
@@ -99,20 +100,15 @@ static void readFile(const char* fileName, std::vector<std::vector<Station>>& st
 				nextIsWord = false;
 			}
 			else {
-				distance.push_back({ stoi(word),linienName });
+				std::cout << word << std::endl;
+				int dist = stoi(word);
+				distance.push_back({ dist,linienName });
 				nextIsWord = true;
 			}
 
 		}
 	} while (getline(fin, line));
 
-	/*
-	for (auto i : stations) {
-		for (auto j : i) {
-			std::cout << j.name << " ";
-		}
-	}
-	*/
 
 	fin.close();
 }
@@ -152,15 +148,14 @@ public:
 			}
 
 		}
-		/*
-		std::list<Connection> asd = l[m[{"Johnstrasse"}]];
-		for (auto i : asd) {
-			std::cout << i.station.name << " Linie: " << i.info.linie << std::endl;
-		}
-		*/
+
 		
 		this->size = m.size();
 		this->vis = new bool[this->size];
+	}
+
+	~Graph() {
+		delete[] vis;
 	}
 
 	void initVis() {
@@ -207,6 +202,9 @@ public:
 				int ID = m[neighbour.station];
 				if (vis[ID] != false)
 					continue;
+				if (current.info.linie != neighbour.info.linie && current.info.linie != "Start") {
+					neighbour.info.distance += PENALTY; //Hoehere gewichtung fuers umsteigen
+				}
 				neighbour.info.distance += current.info.distance;
 				neighbour.pre = current.station;
 				minQ.push(neighbour);
@@ -215,10 +213,18 @@ public:
 	}
 
 	void printPath(std::vector<Connection> path) {
+		printf("\n");
+		std::string lastLine = "Start";
 		for (auto i : path) {
+			if (i.info.linie != lastLine && lastLine != "Start") {
+				std::cout << "\nUmsteigen\n\n";
+			}
 			std::cout << i.info.linie << " " << i.station.name << std::endl;
+			lastLine = i.info.linie;
 		}
 	}
+
+	/*
 
 	void predecSetTest() {
 		std::set<Connection> pre;
@@ -241,19 +247,13 @@ public:
 		for (auto i : pre) {
 			std::cout << i.info.linie << " " << i.station.name << " " << i.pre.name << " ";
 		}
-		*/
+		
 		Station test = { "Goldstr" };
 		std::set<Connection>::iterator it;
 		it = pre.find({ test,{-1,"idk"} });
 		std::cout << it->pre.name;
 
 
-		/*
-		PREDEC DATA
-		int id;
-		Station pre;
-		Connection conn;
-		*/
 
 	}
 
@@ -274,12 +274,6 @@ public:
 		pq.push(c);
 		pq.push(d);
 		pq.push(e);
-		/*
-		pq.push(10);
-		pq.push(30);
-		pq.push(20);
-
-		*/
 		while(!pq.empty()) {
 			std::cout << pq.top().info.distance << pq.top().station.name << " ";
 			pq.pop();
@@ -287,22 +281,11 @@ public:
 	
 
 	}
-
-	void printMapping() {
-		for (auto& i : m) {
-			std::cout << i.first.name << " " << i.second << " Verbindungen: ";
-			for (auto i : l[i.second]) {
-				std::cout << i.station.name << " " << i.info.distance << " Linie: " << i.info.linie << "---";
-			}
-			printf("\n");
-		}
-		std::cout << this->size << std::endl;
-	}
-
+	*/
 
 private:
-	std::list<Connection>* l; //Adjazenz Liste
-	std::map<Station, int> m; //mapping von Station (Name) zu einer ID
+	std::list<Connection>* l;  //Adjazenz Liste
+	std::map<Station, int> m;  //mapping von Station (Name) zu einer ID
 	int size; //Anzahl von unique Stationen
 	bool* vis; //Visited array mit einer groesse gleich der size variable
 };
