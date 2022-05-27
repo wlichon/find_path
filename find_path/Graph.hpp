@@ -73,6 +73,10 @@ static void readFile(const char* fileName, std::vector<std::vector<Station>>& st
 		iss.str(line);
 		while (iss.good()) {
 			iss >> word;
+			if (!iss.good()) {
+				continue;
+			}
+			
 			if (regex_match(word, linie)) {
 				linienName = word;
 				nextIsWord = true;
@@ -100,7 +104,6 @@ static void readFile(const char* fileName, std::vector<std::vector<Station>>& st
 				nextIsWord = false;
 			}
 			else {
-				std::cout << word << std::endl;
 				int dist = stoi(word);
 				distance.push_back({ dist,linienName });
 				nextIsWord = true;

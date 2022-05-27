@@ -1,3 +1,3 @@
 ﻿  main.cpp
-C:\Dev\find_path\find_path\Graph.hpp(151,1): warning C4267: "=": Konvertierung von "size_t" nach "int", Datenverlust möglich
+C:\Dev\find_path\find_path\Graph.hpp(156,1): warning C4267: "=": Konvertierung von "size_t" nach "int", Datenverlust möglich
   find_path.vcxproj -> C:\Dev\find_path\x64\Debug\find_path.exe
